@@ -16,8 +16,9 @@ greedy <- function(file){
 }
 
 greedy_result  = data.frame( 
-  optimo = c(378,696,2790,2499,7975,13166,38805,71925,268963,1796186,1055449,8363114), 
+  optimo = c(882,378,696,2790,2499,7975,13166,38805,71925,268963,1796186,1055449,8363114), 
   greedy = c(
+    greedy("tests/test_feo.in"),
     greedy("tests/test_000_3e1.in"),
     greedy("tests/test_001_3e1.in"),
     greedy("tests/test_002_3e1.in"),
@@ -31,6 +32,7 @@ greedy_result  = data.frame(
     greedy("tests/test_010_1e4.in"),
     greedy("tests/test_011_1e4.in")),
   row.names = c(
+    "feo",
     "00_3e1",
     "01_3e1",
     "02_3e1",
