@@ -65,111 +65,94 @@ greedy_randomized_construction <- function(datos, original_capacity, factor, lrc
     }
   }
   
-  return(list("mejor_ganancia"=gananciaTotal, "seleccionados"=seleccionados, "lrc"=lrc, "data"=datos))
+  return(list("mejor_ganancia"=gananciaTotal, "seleccionados"=unlist(seleccionados), "lrc"=lrc, "data"=datos))
 }
 
 
-local_search_sample<- function(solution, capacidad_original, neighbourhood_size){
-  mejor_ganancia <- solution$mejor_ganancia
-  lrc <- solution$lrc
-  datos <- solution$data
-  
-  GAN <- 1; CAP <- 2
-  
-  for(x in 1:(min(nrow(lrc),neighbourhood_size))){
-    ganancia <- 0
-    capacity <- capacidad_original
-    remaining <- lrc
-    max_index <- x
-    entry <- remaining[max_index,]
-    remaining <- remaining[-max_index,]
-    if(capacity - entry[2] > 0){
-      capacity <- capacity - entry[2]
-      ganancia  <- ganancia + entry[1]    
+obtener_vecinos <- function(seleccionados, capacidad_original, neighbourhood_size){
+  vecinos <- data.frame(index=1:neighbourhood_size)
+  selected_index <- 1
+  vecino_index <- 1
+  while(neighbourhood_size - vecino_index > 0){
+    if(seleccionados[selected_index]){
+      # nuevo <- seleccionados
+      # nuevo[selected_index] <- FALSE
+      # vecinos$vecino[vecino_index] <- nuevo
+      vecinos$fixed[vecino_index] <- selected_index
+      vecino_index <- vecino_index + 1
     }
-    
-    for(i in 1:nrow(lrc)){
-      if(length(remaining$tasa) == 0) break
-      tasa_total <- sum(remaining$tasa)
-      prob <- remaining$tasa / tasa_total
-      max_index <- sample.int(length(remaining$tasa), 1, replace = FALSE, prob)
-      # max_index <- sample( remaining , 1, replace = FALSE, prob = prob)
-      entry <- remaining[max_index,]
-      remaining <- remaining[-max_index,]
-      
-      if(capacity - entry[2] > 0){
-        capacity <- capacity - entry[2]
-        ganancia  <- ganancia + entry[1]    
-      }
-    } 
-    
-    if(capacity > 0 &&  (length(lrc$tasa) + 1) <= nrow(datos) ){
-      for(i in (length(lrc$tasa) + 1):nrow(datos)){
-        if(capacity - datos[i, 2] > 0){
-          capacity <- capacity - datos[i, 2]
-          ganancia <- ganancia + datos[i, 1]    
-        }
-      }
-    }
-    
-    mejor_ganancia <- max(mejor_ganancia, ganancia[1,])
+    selected_index <- selected_index + 1
   }
-  
-  
+  return(vecinos)
+}
+
+mejor_vecino <- function(vecinos, previos, lrc, capacidad){
+  mejor <- vecinos[1]
+  mejor_ganancia <- 0
+  for(v in 1:length(vecinos)){
+    fixed <- vecinos[v,2]
+    seleccionados <- previos
+    seleccionados[fixed] <- FALSE
+    cap <- capacidad - sum(lrc$peso[seleccionados])
+    
+    for(i in (fixed+1):length(lrc)){
+      if(cap - lrc[i,1]> 0){
+        cap <- cap - lrc[i,1]
+        seleccionados[i] <- TRUE
+        if(cap == 0) break
+      }
+    }
+    nueva_ganancia <- sum(lrc$ganancia[seleccionados])
+    if(mejor_ganancia < nueva_ganancia){
+      mejor_ganancia <- nueva_ganancia
+      mejor <- seleccionados
+    }
+  }
+  return(list("ganancia"=mejor_ganancia, "seleccionados"=mejor))
+}
+
+mejor_vecino_sample <- function(vecinos, previos, lrc, capacidad){
+  mejor <- vecinos[1]
+  mejor_ganancia <- 0
+  for(v in 1:length(vecinos)){
+    fixed <- vecinos[v,2]
+    seleccionados <- previos
+    seleccionados[fixed] <- FALSE
+    cap <- capacidad - sum(lrc$peso[seleccionados])
+    tasa_total <- sum(lrc$tasa)
+    prob <- lrc$tasa / tasa_total
+    positions <- sample.int(length(lrc$tasa), length(lrc$tasa), replace = FALSE, prob)
+    for(i in positions){
+      if(i != fixed && !seleccionados[i]  && cap - lrc[i,1]> 0){
+        cap <- cap - lrc[i,1]
+        seleccionados[i] <- TRUE
+        if(cap == 0) break
+      }
+    }
+    nueva_ganancia <- sum(lrc$ganancia[seleccionados])
+    if(mejor_ganancia < nueva_ganancia){
+      mejor_ganancia <- nueva_ganancia
+      mejor <- seleccionados
+    }
+  }
+  return(list("ganancia"=mejor_ganancia, "seleccionados"=mejor))
+}
+
+local_search_sample_fixed <- function(solution, capacidad_original, neighbourhood_size){
+  mejor_ganancia <- solution$mejor_ganancia
+
+  vecinos <- obtener_vecinos(solution$seleccionados, capacidad_original, neighbourhood_size)
+  mejor <- mejor_vecino_sample(vecinos, solution$seleccionados, solution$lrc, capacidad_original)
+
+  while(mejor_ganancia < mejor$ganancia){
+    mejor_ganancia <- mejor$ganancia
+    vecinos <- obtener_vecinos(mejor$seleccionados, capacidad_original, neighbourhood_size)
+    mejor <- mejor_vecino_sample(vecinos, mejor$seleccionados, solution$lrc, capacidad_original)
+  }
+
   return(mejor_ganancia)
 }
 
-local_search <- function(solution, capacidad_original, neighbourhood_size){
-  mejor_ganancia <- solution$mejor_ganancia
-  seleccionados <- solution$seleccionados
-  lrc <- solution$lrc
-  datos <- solution$data
-  
-  GAN <- 1; CAP <- 2
-  
-  sel_aux <- data.frame(e=c(1:nrow(lrc)))
-  sel_aux[1]<-FALSE
-  u <- 1
-  for(i in 1:neighbourhood_size){
-    for(r in u:nrow(seleccionados)){
-      if(seleccionados[r,1]){
-        u <- r
-        break 
-      }
-    }
-    
-    gananciaTotal <- lrc[u, GAN]
-    capacidad <- capacidad_original - lrc[u,CAP]
-    for(i in 1:nrow(lrc)){
-      if(capacidad - lrc[i, CAP] > 0 && i != u){
-        sel_aux[i,1]<-TRUE
-        capacidad <- capacidad - lrc[i, CAP]
-        gananciaTotal <- gananciaTotal + lrc[i, GAN]    
-      }
-    }
-    
-    if(capacidad > 0 &&  (length(lrc$tasa) + 1) <= nrow(datos) ){
-      for(i in (length(lrc$tasa) + 1):nrow(datos)){
-        if(capacidad - datos[i, 2] > 0){
-          capacidad <- capacidad - datos[i, 2]
-          gananciaTotal <- gananciaTotal + datos[i, 1]    
-        }
-      }
-    }
-    
-    if(gananciaTotal > mejor_ganancia){
-      mejor_ganancia <- gananciaTotal
-      seleccionados <- sel_aux
-    }
-    
-    u <- u + 1
-    if(u > nrow(seleccionados)){
-      break
-    }
-  }
-  
-  return(mejor_ganancia)
-}
 
 grasp <- function(file, max_iterations, lrc_factor, neighbourhood_size, lrc_strategy){
   ptm <- proc.time()
@@ -177,11 +160,9 @@ grasp <- function(file, max_iterations, lrc_factor, neighbourhood_size, lrc_stra
   best_earning <- greedy_position(data$input, data$capacity)$earnings
   message("Greedy: ", best_earning)
   for(i in 1:max_iterations){
-    if(i %% 3 == 0){
-      neighbourhood_size <- neighbourhood_size + 1
-    }
     solution     <- greedy_randomized_construction(data$input, data$capacity,lrc_factor,lrc_strategy)
-    earning      <- local_search(solution, data$capacity, neighbourhood_size)
+    amount_selected <- length(solution$seleccionados[mapply(function(X) { X }, solution$seleccionados) == TRUE])
+    earning      <- local_search_sample_fixed(solution, data$capacity, min(neighbourhood_size, amount_selected))
     best_earning <- max(best_earning, earning)
   }
   message(file," ~~> ", (proc.time() - ptm)[3])
@@ -196,7 +177,9 @@ percentage_to_optimum <- function(res,opt){
 run_greedy_randomized <- function(file, opt){
   
   return(c(
-    percentage_to_optimum(grasp(file, max_iterations = 30, lrc_factor = 0.01, neighbourhood_size = 1, lrc_strategy = "factor"), opt)
+    percentage_to_optimum(grasp(file, max_iterations = 30, lrc_factor = 0.01, neighbourhood_size = 2, lrc_strategy = "factor"), opt),
+    percentage_to_optimum(grasp(file, max_iterations = 30, lrc_factor = 0.01, neighbourhood_size = 5, lrc_strategy = "factor"), opt),
+    percentage_to_optimum(grasp(file, max_iterations = 30, lrc_factor = 0.01, neighbourhood_size = 15, lrc_strategy = "factor"), opt)
     ))
 
 }
@@ -216,7 +199,7 @@ tests = c(
   run_greedy_randomized("tests/test_023_2e3.in", 1419266)
 )
 
-cases = matrix(tests, ncol = length(tests)/1, nrow = 1)
+cases = matrix(tests, ncol = length(tests)/3, nrow = 3)
 
 result_matrix = cases
 range_tests <- 12:23
@@ -227,60 +210,11 @@ greedy_plot <- barplot(
   names.arg = range_tests, las=1, xlab = "Porcentaje al óptimo",
   horiz = TRUE,
   beside = TRUE,
-  col = terrain.colors(1)
-)
-
-legend(x = -5, y= -15, inset=.05, title="Neighbourhood Size",
-       c("de 1 a 10", "de 3 a 13","de 8 a 18"), fill=terrain.colors(1), horiz=TRUE)
-
-text(y = greedy_plot, 
-     x = result_matrix, 
-     labels = result_matrix,
-     pos = 4, cex = 0.7, col = "black", offset = 1)
-
-
-
-grasp = c(0.138999999999214
-,0.148000000001048
-,0.199000000000524
-,1.15599999999904
-,1.20799999999872
-,1.1820000000007
-,4.32500000000073)
-
-branch = c(0.081000000  ,
-0.0549999999 ,
-0.128000000  ,
-2.24200000   ,
-27.7250000   ,
-11.6619999   ,
-57.0219999   )
-
-backtracking = c(
-  0.82300000000032,
-  0.82300000000032,
-  6.53299999999945,
-  175.59,
-  171.174,
-  200,
-  200)
-
-cases = t(matrix(c(grasp,branch,backtracking), ncol = 3, nrow = 7))
-
-result_matrix = cases
-range_tests <- 12:18
-
-par(mar=c(9.2, 4.1, 1.1, 4.1), xpd=TRUE)
-greedy_plot <- barplot(
-  result_matrix, 
-  names.arg = range_tests, las=1, xlab = "Tiempo en segundos",
-  horiz = TRUE,
-  beside = TRUE,
   col = terrain.colors(3)
 )
 
-legend(x = -5, y= -5, inset=.05, title="Algoritmo",
-       c("GRASP", "Branch & Bound","Backtracking"), fill=terrain.colors(3), horiz=TRUE)
+legend(x = 0, y= -10, inset=.05, title="Neighbourhood Size",
+       c("2", "5","10"), fill=terrain.colors(3), horiz=TRUE)
 
 text(y = greedy_plot, 
      x = result_matrix, 

@@ -164,3 +164,55 @@ text(y = greedy_plot,
      x = result_matrix, 
      labels = result_matrix,
      pos = 4, cex = 0.7, col = "black", offset = 1)
+
+
+
+
+local_search_sample<- function(solution, capacidad_original, neighbourhood_size){
+  mejor_ganancia <- solution$mejor_ganancia
+  lrc <- solution$lrc
+  datos <- solution$data
+  
+  GAN <- 1; CAP <- 2
+  
+  for(x in 1:(min(nrow(lrc),neighbourhood_size))){
+    ganancia <- 0
+    capacity <- capacidad_original
+    remaining <- lrc
+    max_index <- x
+    entry <- remaining[max_index,]
+    remaining <- remaining[-max_index,]
+    if(capacity - entry[2] > 0){
+      capacity <- capacity - entry[2]
+      ganancia  <- ganancia + entry[1]    
+    }
+    
+    for(i in 1:nrow(lrc)){
+      if(length(remaining$tasa) == 0) break
+      tasa_total <- sum(remaining$tasa)
+      prob <- remaining$tasa / tasa_total
+      max_index <- sample.int(length(remaining$tasa), 1, replace = FALSE, prob)
+      entry <- remaining[max_index,]
+      remaining <- remaining[-max_index,]
+      
+      if(capacity - entry[2] > 0){
+        capacity <- capacity - entry[2]
+        ganancia  <- ganancia + entry[1]    
+      }
+    } 
+    
+    if(capacity > 0 &&  (length(lrc$tasa) + 1) <= nrow(datos) ){
+      for(i in (length(lrc$tasa) + 1):nrow(datos)){
+        if(capacity - datos[i, 2] > 0){
+          capacity <- capacity - datos[i, 2]
+          ganancia <- ganancia + datos[i, 1]    
+        }
+      }
+    }
+    
+    mejor_ganancia <- max(mejor_ganancia, ganancia[1,])
+  }
+  
+  
+  return(mejor_ganancia)
+}

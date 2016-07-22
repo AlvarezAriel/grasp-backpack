@@ -41,44 +41,43 @@ Se usa una distribución de probabilidad para seleccionar al siguiente elemento,
 (aclaración: las listas comienzan en la posición 1, no 0).
 
 ```
-function busqueda_local(solucion, mejor_ganancia, lrc, capacidad_original, neighbourhood_size){
-  restantes <- lrc
-  Por cada x en 1..min(largo(lrc),neighbourhood_size) {
-    ganancia <- 0
-    max_index <- x
-    capacidad <- capacidad_original
-    elemento  <- restantes[max_index]
-    restantes <- restantes sin el elemento de la posición max_index
-    if(capacidad - elemento.peso > 0){
-      capacidad <- capacidad - elemento.peso
-      ganancia  <- ganancia + elemento.ganancia   
-    }
-    
-    Por cada i en 1..largo(lrc) {
-      if(remaining está vacío) break
-      
-      tasa_total <- sumatoria(tasas en remaining)
-      distribucion <- por cada elem en remaining: elem.tasa/tasa_total
-      max_index <- se selecciona una posicion de remaining según las probabilidades dadas por distribucion
-      elemento <- remaining[max_index]
-      restantes <- restantes sin el elemento de la posición max_index
-      if(capacidad - elemento.peso > 0){
-        capacidad <- capacidad - elemento.peso
-        ganancia  <- ganancia + elemento.ganancia   
-      }
-      
-      mejor_ganancia <- max(mejor_ganancia, ganancia[1,])
-    }
-    
-    return mejor_ganancia
-    
+function mejor_vecino(vecinos, lrc, capacidad_original){
+  por cada vecino
+    se genera una muestra a partir de una distribución de probabilidad dada por 
+      la tasa de cada elemento seleccionado sobre el total de las tasas
+      de manera tal que un elemento con mayor tasa tiene más chances de ser seleccionado primero
+    se itera sobre la muestra
+      si se encuentra un elemento que no había sido seleccionado y que entra en la mochila, se lo coloca
+    se calcula la ganancia de este vecino
+    se guarda la mejor ganancia hasta el momento
+  retornamos la mejor ganancia y su correspondiente selección (vector booleano)  
+}
+
+function obtener_vecinos(seleccionados, capacidad_original, neighbourhood_size){
+  por cada posición seleccionada (==TRUE) en "seleccionados"
+    se genera un nuevo vector booleano con dicha posición en FALSE
+  se retornan todos los vectores generados  
+}
+
+function local_search(solucion, mejor_ganancia, lrc, capacidad_original, neighbourhood_size){
+
+  vecinos <- obtener_vecinos(solution$seleccionados, capacidad_original, neighbourhood_size)
+  mejor   <- mejor_vecino(vecinos, lrc, capacidad_original)
+
+  while(mejor_ganancia < mejor$ganancia){
+    mejor_ganancia <- mejor$ganancia
+    vecinos <- obtener_vecinos(mejor$seleccionados, capacidad_original, neighbourhood_size)
+    mejor <- mejor_vecino(vecinos, lrc, capacidad_original)
   }
+
+  return(mejor_ganancia)
+}
   
 ```
 
 Se corrieron los tests para diferentes valores de `neighbourhood_size`
 
-![](assets/local_search_by_sample.jpeg)
+![](assets/local_search_sample.jpeg)
 
 Se observa que mayores valores de `neighbourhood_size` no necesariamente mejoran los resultados finales. Esto puede deberse a que en algunos casos el elemento necesario para llegar a la solución óptima no forma parte del LRC.
 
@@ -87,39 +86,36 @@ Se observa que mayores valores de `neighbourhood_size` no necesariamente mejoran
 Para cada uno de los primeros N elementos de LRC no seleccionados en la solución greedy aleatoria, se selecciona el elemento y se vuelve a aplicar greedy sobre el resto. 
 
 ```
+function obtener_vecinos(seleccionados, capacidad_original, neighbourhood_size){
+  por cada posición seleccionada (==TRUE) en "seleccionados"
+    se genera un nuevo vector booleano con dicha posición en FALSE
+  se retornan todos los vectores generados  
+}
+
+function mejor_vecino(vecinos, lrc, capacidad_original){
+  por cada vecino
+    se busca un/varios elemento/s que entre en el hueco generado al obtener los vecinos
+    se calcula la ganancia de este vecino
+    se guarda la mejor ganancia hasta el momento
+  retornamos la mejor ganancia y su correspondiente selección (vector booleano)  
+}
+
 function local_search(solucion, mejor_ganancia, lrc, capacidad_original, neighbourhood_size){
 
-  sel_aux <- lista de tamaño lrc inicializada con valores FALSE
-  u <- 1
-  for(i in 1:neighbourhood_size){
-    u <- siguiente posición de un elemento seleccionado en solución a partir de la posición u
-    
-    ganancia_total <- lrc[u].ganancia
-    capacidad <- capacidad_original - lrc[u].capacidad
-    Por cada i en 1..largo(lrc) {
-      if(lrc[i] entra en la capacidad  && i no es la posición fijada por u){
-        sel_aux[i] <- TRUE
-        capacidad <- capacidad - lrc[i].capacidad
-        gananciaTotal <- gananciaTotal + lrc[i].ganancia    
-      }
-    }
-    
-    if(ganancia_total > mejor_ganancia){
-      mejor_ganancia <- ganancia_total
-      seleccionados <- sel_aux
-    }
-    
-    u <- u + 1
-    if(u > largo(seleccionados)){
-      break
-    }
+  vecinos <- obtener_vecinos(solution$seleccionados, capacidad_original, neighbourhood_size)
+  mejor   <- mejor_vecino(vecinos, lrc, capacidad_original)
+
+  while(mejor_ganancia < mejor$ganancia){
+    mejor_ganancia <- mejor$ganancia
+    vecinos <- obtener_vecinos(mejor$seleccionados, capacidad_original, neighbourhood_size)
+    mejor <- mejor_vecino(vecinos, lrc, capacidad_original)
   }
-  
+
   return(mejor_ganancia)
 }
 ```
 
-![](assets/local_search_unselected.jpeg)
+![](assets/local_search_all.jpeg)
 
 
 ### Conclusión
