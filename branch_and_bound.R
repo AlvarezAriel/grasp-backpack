@@ -4,7 +4,7 @@ bounds <- function(datos, capacidad_original){
   capacidad_upper <- capacidad_original
   lower <- 0
   upper <- 0
-  for(i in nrow(datos):1){
+  for(i in 1:nrow(datos)){
     if(capacidad_upper - datos[i, 2] > 0){
       capacidad_upper <- capacidad_upper - datos[i, 2]
       upper <- upper + datos[i, 1]
@@ -65,7 +65,7 @@ branch <- function(file){
   table      <- read.table(file, header = FALSE)
   datos      <- data.frame(ganancia = table[-1,-1]$V2, peso = table[-1,-1]$V3)
   datos$tasa <- datos$ganancia / datos$peso
-  datos      <- datos[order(datos$tasa), ]
+  datos      <- datos[order(-datos$tasa), ]
   max_weight <- max(datos$peso)
   capacidad  <- table[1,2]
   bound      <- bounds(datos, capacidad)
@@ -87,18 +87,18 @@ run_branch_and_bound <- function(){
   message("|Test|Resultado Greedy|Iteraciones|Optimo|Obtenido|Tiempo|")
   message("|--|--|--|--|--|--|")
   # 
-  # report_to_console(1794, ("tests/test_012_2e1.in"))
-  # report_to_console(2291, ("tests/test_013_2e1.in"))
-  # report_to_console(4129, ("tests/test_014_2e1.in"))
-  # report_to_console(5370, ("tests/test_015_2e2.in"))
-  # report_to_console(7962, ("tests/test_016_2e2.in"))
-  # report_to_console(6898, ("tests/test_017_2e2.in"))
-  # report_to_console(7500, ("tests/test_018_1e3.in"))
+  report_to_console(1794, ("tests/test_012_2e1.in"))
+  report_to_console(2291, ("tests/test_013_2e1.in"))
+  report_to_console(4129, ("tests/test_014_2e1.in"))
+  report_to_console(5370, ("tests/test_015_2e2.in"))
+  report_to_console(7962, ("tests/test_016_2e2.in"))
+  report_to_console(6898, ("tests/test_017_2e2.in"))
+  report_to_console(7500, ("tests/test_018_1e3.in"))
   report_to_console(64240, ("tests/test_019_1e3.in"))
   report_to_console(693644, ("tests/test_020_1e3.in"))
-  report_to_console(54945, ("tests/test_021_2e3.in"))
-  report_to_console(236420, ("tests/test_022_2e3.in"))
-  report_to_console(1419266, ("tests/test_023_2e3.in"))
+  # report_to_console(54945, ("tests/test_021_2e3.in"))
+  # report_to_console(236420, ("tests/test_022_2e3.in"))
+  # report_to_console(1419266, ("tests/test_023_2e3.in"))
 }
 
 run_branch_and_bound()

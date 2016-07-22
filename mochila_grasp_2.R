@@ -20,15 +20,26 @@ greedy_position <- function(data, capacity){
   return(list("max_index"=max_index, "earnings" = ganancia))
 }
 
-greedy_randomized_construction <- function(datos, original_capacity, factor){
+greedy_randomized_construction <- function(datos, original_capacity, factor, lrc_strategy){
   datos = datos[order(-datos$tasa), ]
   min_tasa = min(datos$tasa)
   max_tasa = max(datos$tasa)
   index <- greedy_position(datos, original_capacity)$max_index
-  # lrc_tope <- max_tasa - factor*(max_tasa - min_tasa)
-  lrc_tope <- ceiling(min(index + index*factor, nrow(datos)))
-  # lrc_tope <- median(datos$tasa)
-  lrc = head(datos,lrc_tope)
+  
+  if(lrc_strategy == "factor"){
+    lrc_tope <- ceiling(min(index + index*factor, nrow(datos)))
+    lrc = head(datos,lrc_tope)
+  } else if (lrc_strategy == "median"){
+    median <- median(datos$tasa)
+    lrc_tope <- median - median*factor
+    lrc = datos[datos$tasa > lrc_tope,]
+  } else if (lrc_strategy == "mean") {
+    mean <- mean(datos$tasa)
+    lrc_tope <- mean - mean*factor
+    lrc = datos[datos$tasa > lrc_tope,]
+  }
+  
+  
   lrc = datos[sample(x = 1:length(lrc$tasa), size = length(lrc$tasa), replace = F ), ] 
   seleccionados = data.frame(e=c(1:nrow(lrc)))
   seleccionados[1]<-FALSE
@@ -55,6 +66,57 @@ greedy_randomized_construction <- function(datos, original_capacity, factor){
   }
   
   return(list("mejor_ganancia"=gananciaTotal, "seleccionados"=seleccionados, "lrc"=lrc, "data"=datos))
+}
+
+
+local_search_sample<- function(solution, capacidad_original, neighbourhood_size){
+  mejor_ganancia <- solution$mejor_ganancia
+  lrc <- solution$lrc
+  datos <- solution$data
+  
+  GAN <- 1; CAP <- 2
+  
+  for(x in 1:(min(nrow(lrc),neighbourhood_size))){
+    ganancia <- 0
+    capacity <- capacidad_original
+    remaining <- lrc
+    max_index <- x
+    entry <- remaining[max_index,]
+    remaining <- remaining[-max_index,]
+    if(capacity - entry[2] > 0){
+      capacity <- capacity - entry[2]
+      ganancia  <- ganancia + entry[1]    
+    }
+    
+    for(i in 1:nrow(lrc)){
+      if(length(remaining$tasa) == 0) break
+      tasa_total <- sum(remaining$tasa)
+      prob <- remaining$tasa / tasa_total
+      max_index <- sample.int(length(remaining$tasa), 1, replace = FALSE, prob)
+      # max_index <- sample( remaining , 1, replace = FALSE, prob = prob)
+      entry <- remaining[max_index,]
+      remaining <- remaining[-max_index,]
+      
+      if(capacity - entry[2] > 0){
+        capacity <- capacity - entry[2]
+        ganancia  <- ganancia + entry[1]    
+      }
+    } 
+    
+    if(capacity > 0 &&  (length(lrc$tasa) + 1) <= nrow(datos) ){
+      for(i in (length(lrc$tasa) + 1):nrow(datos)){
+        if(capacity - datos[i, 2] > 0){
+          capacity <- capacity - datos[i, 2]
+          ganancia <- ganancia + datos[i, 1]    
+        }
+      }
+    }
+    
+    mejor_ganancia <- max(mejor_ganancia, ganancia[1,])
+  }
+  
+  
+  return(mejor_ganancia)
 }
 
 local_search <- function(solution, capacidad_original, neighbourhood_size){
@@ -109,13 +171,16 @@ local_search <- function(solution, capacidad_original, neighbourhood_size){
   return(mejor_ganancia)
 }
 
-grasp <- function(file, max_iterations, lrc_factor, neighbourhood_size){
+grasp <- function(file, max_iterations, lrc_factor, neighbourhood_size, lrc_strategy){
   ptm <- proc.time()
   data <- read_data(file)
   best_earning <- greedy_position(data$input, data$capacity)$earnings
   message("Greedy: ", best_earning)
   for(i in 1:max_iterations){
-    solution     <- greedy_randomized_construction(data$input, data$capacity,lrc_factor)
+    if(i %% 3 == 0){
+      neighbourhood_size <- neighbourhood_size + 1
+    }
+    solution     <- greedy_randomized_construction(data$input, data$capacity,lrc_factor,lrc_strategy)
     earning      <- local_search(solution, data$capacity, neighbourhood_size)
     best_earning <- max(best_earning, earning)
   }
@@ -125,15 +190,13 @@ grasp <- function(file, max_iterations, lrc_factor, neighbourhood_size){
 
 offset <- 30
 percentage_to_optimum <- function(res,opt){
-  return(round((res*100)/opt, digits = 3))
+  return(min(round((res*100)/opt, digits = 3), 100))
 }
 
 run_greedy_randomized <- function(file, opt){
   
   return(c(
-    percentage_to_optimum(grasp(file, max_iterations =  5, lrc_factor = 0.03, neighbourhood_size = 2), opt),
-    percentage_to_optimum(grasp(file, max_iterations = 10, lrc_factor = 0.02, neighbourhood_size = 5), opt),
-    percentage_to_optimum(grasp(file, max_iterations = 25, lrc_factor = 0.01, neighbourhood_size = 5), opt)
+    percentage_to_optimum(grasp(file, max_iterations = 30, lrc_factor = 0.01, neighbourhood_size = 1, lrc_strategy = "factor"), opt)
     ))
 
 }
@@ -153,17 +216,71 @@ tests = c(
   run_greedy_randomized("tests/test_023_2e3.in", 1419266)
 )
 
-cases = matrix(tests, ncol = length(tests)/3, nrow = 3)
+cases = matrix(tests, ncol = length(tests)/1, nrow = 1)
 
 result_matrix = cases
+range_tests <- 12:23
 
-par(mar=c(4.1, 4.1, 4.1, 4.1), xpd=TRUE)
+par(mar=c(9.2, 4.1, 1.1, 4.1), xpd=TRUE)
 greedy_plot <- barplot(
   result_matrix, 
-  names.arg = 23:12, las=1, xlab = "Porcentaje al óptimo",
+  names.arg = range_tests, las=1, xlab = "Porcentaje al óptimo",
   horiz = TRUE,
-  beside = TRUE
+  beside = TRUE,
+  col = terrain.colors(1)
 )
+
+legend(x = -5, y= -15, inset=.05, title="Neighbourhood Size",
+       c("de 1 a 10", "de 3 a 13","de 8 a 18"), fill=terrain.colors(1), horiz=TRUE)
+
+text(y = greedy_plot, 
+     x = result_matrix, 
+     labels = result_matrix,
+     pos = 4, cex = 0.7, col = "black", offset = 1)
+
+
+
+grasp = c(0.138999999999214
+,0.148000000001048
+,0.199000000000524
+,1.15599999999904
+,1.20799999999872
+,1.1820000000007
+,4.32500000000073)
+
+branch = c(0.081000000  ,
+0.0549999999 ,
+0.128000000  ,
+2.24200000   ,
+27.7250000   ,
+11.6619999   ,
+57.0219999   )
+
+backtracking = c(
+  0.82300000000032,
+  0.82300000000032,
+  6.53299999999945,
+  175.59,
+  171.174,
+  200,
+  200)
+
+cases = t(matrix(c(grasp,branch,backtracking), ncol = 3, nrow = 7))
+
+result_matrix = cases
+range_tests <- 12:18
+
+par(mar=c(9.2, 4.1, 1.1, 4.1), xpd=TRUE)
+greedy_plot <- barplot(
+  result_matrix, 
+  names.arg = range_tests, las=1, xlab = "Tiempo en segundos",
+  horiz = TRUE,
+  beside = TRUE,
+  col = terrain.colors(3)
+)
+
+legend(x = -5, y= -5, inset=.05, title="Algoritmo",
+       c("GRASP", "Branch & Bound","Backtracking"), fill=terrain.colors(3), horiz=TRUE)
 
 text(y = greedy_plot, 
      x = result_matrix, 
