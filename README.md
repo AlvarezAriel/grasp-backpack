@@ -136,28 +136,28 @@ Se analizan primero las ramas para las cuales no se selecciona el elemento en cu
 
 Se tomó esta decisión porque el caso contrario (comenzar seleccionando por los elementos de mayor tasa) generaba tiempos más altos, ej:
 
-|Test|Resultado Greedy|Cant. Nodos|Optimo|Obtenido|Tiempo|
-|--|--|--|--|--|--|
-|tests/test_012_2e1.in|1472|894|1794|1794|0.336999999999534|
-|tests/test_013_2e1.in|1880|314|2291|2291|0.153999999998632|
-|tests/test_014_2e1.in|3475|120|4129|4129|0.0630000000019209|
-|tests/test_015_2e2.in|5193|6454|5370|5370|38.2999999999993|
-|tests/test_016_2e2.in|7735|50015|7962|7759|274.209999999999|
-|tests/test_017_2e2.in|6651|50008|6898|6698|165.702000000001|
-|tests/test_018_1e3.in|7468|50746|7500|7500|64.1810000000005|
+| Test | Resultado Greedy | Cant. Nodos | Optimo | Obtenido | Tiempo  |
+|---|----|----|----|----|----|
+| tests/test_012_2e1.in | 1472 | 894 | 1794 | 1794 | 0.336999999999534  |
+| tests/test_013_2e1.in | 1880 | 314 | 2291 | 2291 | 0.153999999998632  |
+| tests/test_014_2e1.in | 3475 | 120 | 4129 | 4129 | 0.0630000000019209  |
+| tests/test_015_2e2.in | 5193 | 6454 | 5370 | 5370 | 38.2999999999993 |
+| tests/test_016_2e2.in | 7735 | 50015 | 7962 | 7759 | 274.209999999999 |
+| tests/test_017_2e2.in | 6651 | 50008 | 6898 | 6698 | 165.702000000001 |
+| tests/test_018_1e3.in | 7468 | 50746 | 7500 | 7500 | 64.1810000000005 |
 
 Mientras que yendo primero por los elementos de menor tasa se llega a:
 
-|Test|Resultado Greedy| Cant. Nodos |Optimo|Obtenido|Tiempo|
-|--|--|--|--|--|--|
-|tests/test_012_2e1.in|1472|148|1794|1794|0.0840000000025611|
-|tests/test_013_2e1.in|1880|110|2291|2291|0.0569999999970605|
-|tests/test_014_2e1.in|3475|221|4129|4129|0.127000000000407|
-|tests/test_015_2e2.in|5193|719|5370|5370|2.14199999999983|
-|tests/test_016_2e2.in|7735|15273|7962|7962|29.2530000000006|
-|tests/test_017_2e2.in|6651|6479|6898|6898|11.9530000000013|
-|tests/test_018_1e3.in|7468|50988|7500|7468|55.969000000001|
-
+| Test | Resultado Greedy  |Cant. Nodos  | Optimo | Obtenido | Tiempo  | 
+|------ |------|------ |------|------|------|
+| tests/test_012_2e1.in | 1472 | 148 | 1794 | 1794 | 0.0840000000025611  | 
+| tests/test_013_2e1.in | 1880 | 110 | 2291 | 2291 | 0.0569999999970605  | 
+| tests/test_014_2e1.in | 3475 | 221 | 4129 | 4129 | 0.127000000000407  | 
+| tests/test_015_2e2.in | 5193 | 719 | 5370 | 5370 | 2.14199999999983  | 
+| tests/test_016_2e2.in | 7735 | 15273 | 7962 | 7962 | 29.2530000000006  | 
+| tests/test_017_2e2.in | 6651 | 6479 | 6898 | 6898 | 11.9530000000013  | 
+| tests/test_018_1e3.in | 7468 | 50988 | 7500 | 7468 | 55.969000000001 | 
+ 
 Las primeras 7 instancias alcanzan para observar la diferencia considerable de tiempo entre uno y otro.
 
 
